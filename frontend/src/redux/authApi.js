@@ -29,6 +29,9 @@ export const authApi = createApi({
           if (data.token) {
             localStorage.setItem('authToken', data.token);
           }
+          if (data.refresh) {
+            localStorage.setItem('refreshToken', data.refresh);
+          }
         } catch (err) {
           // Handle registration error
         }
@@ -48,6 +51,9 @@ export const authApi = createApi({
           if (data.token) {
             localStorage.setItem('authToken', data.token);
           }
+          if (data.refresh) {
+            localStorage.setItem('refreshToken', data.refresh);
+          }
         } catch (err) {
           // Handle login error
         }
@@ -56,14 +62,19 @@ export const authApi = createApi({
 
     // Logout user
     logout: builder.mutation({
-      query: () => ({
-        url: '/auth/logout/',
-        method: 'POST',
-      }),
+      query: () => {
+        const refreshToken = localStorage.getItem('refreshToken');
+        return {
+          url: '/auth/logout/',
+          method: 'POST',
+          body: { refresh: refreshToken },
+        };
+      },
       async onQueryStarted(arg, { dispatch, queryFulfilled }) {
         try {
           await queryFulfilled;
           localStorage.removeItem('authToken');
+          localStorage.removeItem('refreshToken');
           // Invalidate all queries on logout
           dispatch(authApi.util.resetApiState());
         } catch (err) {

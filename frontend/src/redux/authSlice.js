@@ -15,6 +15,7 @@ const authSlice = createSlice({
       state.user = null;
       state.isAuthenticated = false;
       localStorage.removeItem('authToken');
+      localStorage.removeItem('refreshToken');
       localStorage.removeItem('userRole');
       localStorage.removeItem('username');
     },
@@ -64,6 +65,7 @@ const authSlice = createSlice({
           state.user = null;
           state.isAuthenticated = false;
           localStorage.removeItem('authToken');
+          localStorage.removeItem('refreshToken');
           localStorage.removeItem('userRole');
           localStorage.removeItem('username');
         }
