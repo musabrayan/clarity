@@ -1,12 +1,12 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 
-const API_BASE_URL = 'https://api.clarity.engineer/api'
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
  
 
 export const authApi = createApi({
   reducerPath: 'authApi',
   baseQuery: fetchBaseQuery({
-    baseUrl: API_BASE_URL,
+    baseUrl: `${API_BASE_URL}`,
     credentials: 'include',
     prepareHeaders: (headers) => {
       const token = localStorage.getItem('authToken');
@@ -20,7 +20,7 @@ export const authApi = createApi({
     // Register a new user
     register: builder.mutation({
       query: (credentials) => ({
-        url: '/auth/register/',
+        url: 'api/auth/register/',
         method: 'POST',
         body: credentials,
       }),
@@ -42,7 +42,7 @@ export const authApi = createApi({
     // Login user
     login: builder.mutation({
       query: (credentials) => ({
-        url: '/auth/login/',
+        url: 'api/auth/login/',
         method: 'POST',
         body: credentials,
       }),
@@ -66,7 +66,7 @@ export const authApi = createApi({
       query: () => {
         const refreshToken = localStorage.getItem('refreshToken');
         return {
-          url: '/auth/logout/',
+          url: 'api/auth/logout/',
           method: 'POST',
           body: { refresh: refreshToken },
         };
