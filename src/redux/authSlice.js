@@ -1,11 +1,33 @@
 import { createSlice } from '@reduxjs/toolkit';
 import { authApi } from './authApi';
 
-const initialState = {
-  user: null,
-  isAuthenticated: false,
-  loading: false,
+// Initialize auth state from localStorage
+const initializeFromStorage = () => {
+  const token = localStorage.getItem('authToken');
+  const userId = localStorage.getItem('userId');
+  const username = localStorage.getItem('username');
+  const role = localStorage.getItem('userRole');
+  
+  if (token && username && userId) {
+    return {
+      user: {
+        id: parseInt(userId),
+        username,
+        role
+      },
+      isAuthenticated: true,
+      loading: false,
+    };
+  }
+  
+  return {
+    user: null,
+    isAuthenticated: false,
+    loading: false,
+  };
 };
+
+const initialState = initializeFromStorage();
 
 const authSlice = createSlice({
   name: 'auth',
@@ -16,6 +38,7 @@ const authSlice = createSlice({
       state.isAuthenticated = false;
       localStorage.removeItem('authToken');
       localStorage.removeItem('refreshToken');
+      localStorage.removeItem('userId');
       localStorage.removeItem('userRole');
       localStorage.removeItem('username');
     },
@@ -25,11 +48,16 @@ const authSlice = createSlice({
     },
     initializeAuth: (state) => {
       const token = localStorage.getItem('authToken');
+      const userId = localStorage.getItem('userId');
       const username = localStorage.getItem('username');
       const role = localStorage.getItem('userRole');
       
-      if (token && username) {
-        state.user = { username, role };
+      if (token && username && userId) {
+        state.user = { 
+          id: parseInt(userId),
+          username, 
+          role 
+        };
         state.isAuthenticated = true;
       }
     },
@@ -41,10 +69,15 @@ const authSlice = createSlice({
         authApi.endpoints.login.matchFulfilled,
         (state, { payload }) => {
           state.user = {
+            id: payload.user_id,
             username: payload.username,
             role: payload.role,
           };
           state.isAuthenticated = true;
+          // Store user data for persistence
+          localStorage.setItem('userId', payload.user_id);
+          localStorage.setItem('username', payload.username);
+          localStorage.setItem('userRole', payload.role);
         }
       )
       // Handle register
@@ -52,10 +85,15 @@ const authSlice = createSlice({
         authApi.endpoints.register.matchFulfilled,
         (state, { payload }) => {
           state.user = {
+            id: payload.user_id,
             username: payload.username,
             role: payload.role,
           };
           state.isAuthenticated = true;
+          // Store user data for persistence
+          localStorage.setItem('userId', payload.user_id);
+          localStorage.setItem('username', payload.username);
+          localStorage.setItem('userRole', payload.role);
         }
       )
       // Handle logout
@@ -66,6 +104,7 @@ const authSlice = createSlice({
           state.isAuthenticated = false;
           localStorage.removeItem('authToken');
           localStorage.removeItem('refreshToken');
+          localStorage.removeItem('userId');
           localStorage.removeItem('userRole');
           localStorage.removeItem('username');
         }

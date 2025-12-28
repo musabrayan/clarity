@@ -16,6 +16,7 @@ export const authApi = createApi({
       return headers;
     },
   }),
+  tagTypes: ['Availability'],
   endpoints: (builder) => ({
     // Register a new user
     register: builder.mutation({
@@ -27,14 +28,15 @@ export const authApi = createApi({
       async onQueryStarted(arg, { dispatch, queryFulfilled }) {
         try {
           const { data } = await queryFulfilled;
-          if (data.token) {
-            localStorage.setItem('authToken', data.token);
+          // Store tokens
+          if (data.access) {
+            localStorage.setItem('authToken', data.access);
           }
           if (data.refresh) {
             localStorage.setItem('refreshToken', data.refresh);
           }
         } catch (err) {
-          // Handle registration error
+          console.error('Registration error:', err);
         }
       },
     }),
@@ -49,14 +51,15 @@ export const authApi = createApi({
       async onQueryStarted(arg, { dispatch, queryFulfilled }) {
         try {
           const { data } = await queryFulfilled;
-          if (data.token) {
-            localStorage.setItem('authToken', data.token);
+          // Store tokens
+          if (data.access) {
+            localStorage.setItem('authToken', data.access);
           }
           if (data.refresh) {
             localStorage.setItem('refreshToken', data.refresh);
           }
         } catch (err) {
-          // Handle login error
+          console.error('Login error:', err);
         }
       },
     }),
@@ -74,14 +77,31 @@ export const authApi = createApi({
       async onQueryStarted(arg, { dispatch, queryFulfilled }) {
         try {
           await queryFulfilled;
+        } catch (err) {
+          console.error('Logout error:', err);
+        } finally {
+          // Always clear local storage
           localStorage.removeItem('authToken');
           localStorage.removeItem('refreshToken');
-          // Invalidate all queries on logout
           dispatch(authApi.util.resetApiState());
-        } catch (err) {
-          // Handle logout error
         }
       },
+    }),
+    
+    // Get agent availability status
+    getAvailability: builder.query({
+      query: () => 'api/auth/availability/',
+      providesTags: ['Availability'],
+    }),
+    
+    // Set agent availability (agents only)
+    setAvailability: builder.mutation({
+      query: (isAvailable) => ({
+        url: 'api/auth/availability/',
+        method: 'POST',
+        body: { is_available: isAvailable },
+      }),
+      invalidatesTags: ['Availability'],
     }),
   }),
 });
@@ -90,4 +110,6 @@ export const {
   useRegisterMutation,
   useLoginMutation,
   useLogoutMutation,
+  useGetAvailabilityQuery,
+  useSetAvailabilityMutation,
 } = authApi;

@@ -6,6 +6,8 @@ import Register from './components/auth/Register';
 import Home from './components/Home';
 import AgentDashboard from './components/dashboard/AgentDashboard';
 import UserDashBoard from './components/dashboard/UserDashBoard';
+import UserChat from './pages/UserChat';
+import AgentChat from './pages/AgentChat';
 import { initializeAuth } from './redux/authSlice';
 
 function App() {
@@ -21,8 +23,10 @@ function App() {
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
-        <Route path="/agent-dashboard" element={<AgentDashboard />} />
-        <Route path="/user-dashboard" element={<UserDashBoard />} />
+        <Route path="/dashboard" element={<UserDashBoard />} />
+        <Route path="/agent/dashboard" element={<AgentDashboard />} />
+        <Route path="/chat/:conversationId" element={<UserChat />} />
+        <Route path="/agent/chat/:conversationId" element={<AgentChat />} />
         <Route path="/" element={<Navigate to="/" replace />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

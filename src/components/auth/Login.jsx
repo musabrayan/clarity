@@ -24,7 +24,7 @@ export default function Login() {
       localStorage.setItem('userRole', response.role);
       localStorage.setItem('username', response.username);
       const role = response.role;
-      role === 'USER' ? navigate('/user-dashboard') : navigate('/agent-dashboard');
+      role === 'USER' ? navigate('/dashboard') : navigate('/agent/dashboard');
     } catch (err) {
       setError(err?.data?.detail || err?.data?.message || 'Login failed. Please try again.');
     } finally {
