@@ -8,7 +8,9 @@
     "checkJs": false,
     "jsx": "react-jsx",
     "noEmit": true,
-    "lib": ["ES2015", "DOM"]
+    "lib": ["ES2015", "DOM"],
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true
   },
   "include": ["src"],
   "exclude": ["node_modules"]

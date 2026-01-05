@@ -1,17 +1,10 @@
+# accounts/permissions.py
 from rest_framework.permissions import BasePermission
-
 
 class IsAgent(BasePermission):
     def has_permission(self, request, view):
-        return (
-            request.user.is_authenticated
-            and request.user.profile.role == 'AGENT'
-        )
+        return request.user.groups.filter(name="AGENT").exists()
 
-
-class IsNormalUser(BasePermission):
+class IsUser(BasePermission):
     def has_permission(self, request, view):
-        return (
-            request.user.is_authenticated
-            and request.user.profile.role == 'USER'
-        )
+        return request.user.groups.filter(name="USER").exists()

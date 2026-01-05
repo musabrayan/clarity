@@ -1,1 +1,0 @@
-web: gunicorn clarity_backend.wsgi
