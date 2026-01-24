@@ -3,7 +3,7 @@ import { Phone, Headphones } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import API_URL from '@/config/api';
+import API_URL from '@/config';
 
 const CustomerCallPage = () => {
     const [status, setStatus] = useState('Waiting for user action…');

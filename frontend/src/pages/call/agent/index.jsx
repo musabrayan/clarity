@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Headphones, Phone, PhoneOff, AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import API_URL from '@/config/api';
+import API_URL from '@/config';
 
 const AgentPanel = () => {
     const [status, setStatus] = useState('offline');

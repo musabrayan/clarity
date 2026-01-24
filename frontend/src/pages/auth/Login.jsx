@@ -8,7 +8,8 @@ import { Label } from '@/components/ui/label'
 import { Card } from '@/components/ui/card'
 import { toast } from 'sonner'
 import axios from 'axios'
-import API_URL from '@/config/api'
+import API_URL from '@/config'
+
 
 const Login = () => {
   const dispatch = useDispatch()

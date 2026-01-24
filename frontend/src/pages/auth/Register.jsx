@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/select'
 import { toast } from 'sonner'
 import axios from 'axios'
-import API_URL from '@/config/api'
+import API_URL from '@/config'
 
 const Register = () => {
   const [formData, setFormData] = useState({
