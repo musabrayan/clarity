@@ -19,7 +19,8 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
 const corsOptions = {
-    origin: ['http://localhost:5173','https://clarity-ghas.onrender.com'],
+    origin: ['http://localhost:5173',"https://clarity.engineer",
+    "https://www.clarity.engineer"],
     credentials: true
 };
 app.use(cors(corsOptions));
