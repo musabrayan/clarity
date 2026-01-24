@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/select'
 import { toast } from 'sonner'
 import axios from 'axios'
+import API_URL from '@/config/api'
 
 const Register = () => {
   const [formData, setFormData] = useState({
@@ -39,7 +40,7 @@ const Register = () => {
     setLoading(true)
 
     try {
-      const response = await axios.post('http://localhost:3000/api/v1/user/register', {
+      const response = await axios.post(`${API_URL}/api/v1/user/register`, {
         fullName: formData.fullName,
         username: formData.username,
         email: formData.email,

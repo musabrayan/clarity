@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label'
 import { Card } from '@/components/ui/card'
 import { toast } from 'sonner'
 import axios from 'axios'
+import API_URL from '@/config/api'
 
 const Login = () => {
   const dispatch = useDispatch()
@@ -33,7 +34,7 @@ const Login = () => {
     setLoading(true)
 
     try {
-      const response = await axios.post('http://localhost:3000/api/v1/user/login', {
+      const response = await axios.post(`${API_URL}/api/v1/user/login`, {
         username: formData.username,
         password: formData.password
       }, {

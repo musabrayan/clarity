@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Headphones, Phone, PhoneOff, AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import API_URL from '@/config/api';
 
 const AgentPanel = () => {
     const [status, setStatus] = useState('offline');
@@ -28,7 +29,7 @@ const AgentPanel = () => {
 
             setStatusMessage('Initializing agent…');
 
-            const res = await fetch('http://localhost:3000/api/v1/call/token/agent');
+            const res = await fetch(`${API_URL}/api/v1/call/token/agent`);
             const data = await res.json();
             const { token, identity } = data;
 

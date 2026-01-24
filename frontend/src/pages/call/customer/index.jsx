@@ -3,6 +3,7 @@ import { Phone, Headphones } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import API_URL from '@/config/api';
 
 const CustomerCallPage = () => {
     const [status, setStatus] = useState('Waiting for user action…');
@@ -25,7 +26,7 @@ const CustomerCallPage = () => {
             await unlockAudio();
             setStatus('Initializing audio…');
 
-            const res = await fetch('http://localhost:3000/api/v1/call/token/user');
+            const res = await fetch(`${API_URL}/api/v1/call/token/user`);
             const data = await res.json();
             const { token, identity } = data;
 
