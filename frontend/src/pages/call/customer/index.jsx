@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Phone, Headphones } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,8 +10,23 @@ const CustomerCallPage = () => {
     const [isAudioReady, setIsAudioReady] = useState(false);
     const [isCallActive, setIsCallActive] = useState(false);
     const [isInitializing, setIsInitializing] = useState(false);
+    const [isFindingAgent, setIsFindingAgent] = useState(false);
     const deviceRef = useRef(null);
     const callRef = useRef(null);
+
+    // Cleanup: destroy device when component unmounts
+    useEffect(() => {
+        return () => {
+            if (callRef.current) {
+                try { callRef.current.disconnect(); } catch (e) { /* ignore */ }
+                callRef.current = null;
+            }
+            if (deviceRef.current) {
+                try { deviceRef.current.destroy(); } catch (e) { /* ignore */ }
+                deviceRef.current = null;
+            }
+        };
+    }, []);
 
     const unlockAudio = async () => {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -26,8 +41,16 @@ const CustomerCallPage = () => {
             await unlockAudio();
             setStatus('Initializing audio…');
 
-            const res = await fetch(`${API_URL}/api/v1/call/token/user`);
+            const res = await fetch(`${API_URL}/api/v1/call/token/customer`, {
+                credentials: 'include'
+            });
             const data = await res.json();
+            
+            if (!data.success) {
+                setStatus(data.message || 'Failed to get token');
+                return;
+            }
+            
             const { token, identity } = data;
 
             console.log('User identity:', identity);
@@ -51,7 +74,7 @@ const CustomerCallPage = () => {
 
         } catch (err) {
             console.error(err);
-            setStatus('Microphone permission denied');
+            setStatus(err.message || 'Initialization failed');
         } finally {
             setIsInitializing(false);
         }
@@ -64,11 +87,26 @@ const CustomerCallPage = () => {
         }
 
         try {
-            setStatus('Calling agent…');
+            setIsFindingAgent(true);
+            setStatus('Finding available agent...');
+
+            const agentRes = await fetch(`${API_URL}/api/v1/call/available-agent`, {
+                credentials: 'include'
+            });
+            const agentData = await agentRes.json();
+
+            if (!agentData.success) {
+                setStatus(agentData.message || 'No agent available');
+                return;
+            }
+
+            const agentIdentity = agentData.identity;
+
+            setStatus('Calling agent...');
             setIsCallActive(true);
 
             const call = await deviceRef.current.connect({
-                params: { To: 'agent' }
+                params: { To: agentIdentity }
             });
 
             callRef.current = call;
@@ -96,6 +134,8 @@ const CustomerCallPage = () => {
             console.error('Failed to connect:', err);
             setStatus('Failed to connect: ' + err.message);
             setIsCallActive(false);
+        } finally {
+            setIsFindingAgent(false);
         }
     };
 
@@ -110,8 +150,8 @@ const CustomerCallPage = () => {
         <div className="min-h-screen flex items-center justify-center p-4">
             <Card className="w-full max-w-md">
                 <CardHeader>
-                    <CardTitle>User Panel</CardTitle>
-                    <CardDescription>Initialize audio and call the agent</CardDescription>
+                    <CardTitle>Call Support Agent</CardTitle>
+                    <CardDescription>Initialize audio and call an available agent</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <div className="flex flex-col gap-3">
@@ -127,7 +167,7 @@ const CustomerCallPage = () => {
 
                         <Button
                             onClick={callAgent}
-                            disabled={!isAudioReady || isCallActive}
+                            disabled={!isAudioReady || isCallActive || isFindingAgent}
                             className="w-full"
                             size="lg"
                             variant="default"

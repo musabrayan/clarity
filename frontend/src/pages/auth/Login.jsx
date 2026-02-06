@@ -1,5 +1,5 @@
-import React, { useState } from 'react'
-import { useDispatch } from 'react-redux'
+import React, { useState, useEffect } from 'react'
+import { useDispatch, useSelector } from 'react-redux'
 import { useNavigate } from 'react-router-dom'
 import { setUser } from '@/redux/slice/user.slice'
 import { Button } from '@/components/ui/button'
@@ -14,12 +14,23 @@ import API_URL from '@/config'
 const Login = () => {
   const dispatch = useDispatch()
   const navigate = useNavigate()
+  const { isAuthenticated, currentUser } = useSelector((state) => state.user)
   const [formData, setFormData] = useState({
     username: '',
     password: ''
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+
+  useEffect(() => {
+    if (isAuthenticated && currentUser) {
+      if (currentUser.role === 'customer') {
+        navigate('/')
+      } else if (currentUser.role === 'agent') {
+        navigate('/agent/dashboard')
+      }
+    }
+  }, [isAuthenticated, currentUser, navigate])
 
   const handleChange = (e) => {
     const { name, value } = e.target
@@ -50,14 +61,7 @@ const Login = () => {
         toast.success(response.data.message)
         // Store user data in Redux
         dispatch(setUser(response.data.user))
-        // Also store in localStorage for persistence
-        localStorage.setItem('user', JSON.stringify(response.data.user))
-        // Redirect based on role
-        if (response.data.user.role === 'customer') {
-          navigate('/customer/dashboard')
-        } else if (response.data.user.role === 'agent') {
-          navigate('/agent/dashboard')
-        }
+        // Redirect happens automatically via useEffect
       }
     } catch (err) {
       console.error('Login error:', err)
@@ -127,9 +131,13 @@ const Login = () => {
 
             <p className="text-center text-sm text-muted-foreground">
               Don't have an account?{' '}
-              <a href="/register" className="font-medium underline underline-offset-4 hover:text-primary">
+              <button
+                type="button"
+                onClick={() => navigate('/register')}
+                className="font-medium underline underline-offset-4 hover:text-primary"
+              >
                 Sign up
-              </a>
+              </button>
             </p>
           </form>
         </div>

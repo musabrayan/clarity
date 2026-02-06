@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -15,6 +16,7 @@ import axios from 'axios'
 import API_URL from '@/config'
 
 const Register = () => {
+  const navigate = useNavigate()
   const [formData, setFormData] = useState({
     fullName: '',
     username: '',
@@ -58,7 +60,7 @@ const Register = () => {
         console.log('Registration successful:', response.data)
         toast.success(response.data.message)
         // Redirect to login page
-        window.location.href = '/login'
+        navigate('/login')
       }
     } catch (err) {
       console.error('Registration error:', err)
@@ -195,9 +197,13 @@ const Register = () => {
 
             <p className="text-center text-sm text-muted-foreground">
               Already have an account?{' '}
-              <a href="/login" className="font-medium underline underline-offset-4 hover:text-primary">
+              <button
+                type="button"
+                onClick={() => navigate('/login')}
+                className="font-medium underline underline-offset-4 hover:text-primary"
+              >
                 Sign in
-              </a>
+              </button>
             </p>
           </form>
         </div>

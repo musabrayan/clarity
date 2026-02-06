@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { useSelector, useDispatch } from 'react-redux'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { clearUser } from '@/redux/slice/user.slice'
 import { 
   Navbar as ResizableNavbar, 
@@ -12,17 +12,31 @@ import {
   MobileNavToggle,
   NavbarButton
 } from '@/components/ui/resizable-navbar'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import {
+  Popover,
+  PopoverContent,
+  PopoverDescription,
+  PopoverHeader,
+  PopoverTitle,
+  PopoverTrigger,
+} from '@/components/ui/popover'
+import { Button } from '@/components/ui/button'
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false)
-  const { isAuthenticated } = useSelector((state) => state.user)
+  const [popoverOpen, setPopoverOpen] = useState(false)
+  const { isAuthenticated, currentUser } = useSelector((state) => state.user)
+  console.log(isAuthenticated, currentUser);
+  
   const dispatch = useDispatch()
   const navigate = useNavigate()
 
   const navItems = [
     { name: 'Home', link: '/' },
-    { name: 'Call an agent', link: '/call' },
-    { name: 'Chat with an agent', link: '/chat' }
+    {name: 'Dashboard', link: isAuthenticated ? (currentUser?.role === 'agent' ? '/agent/dashboard' : '/customer/dashboard') : '/login' },
+    { name: 'Manage Call', link: isAuthenticated ? (currentUser?.role === 'customer' ? '/customer/call' : '/agent/call') : '/login' },
+    // { name: 'Chat with an agent', link: '/chat' }
   ]
 
   const handleNavClick = () => {
@@ -40,8 +54,8 @@ const Navbar = () => {
       {/* Desktop Navbar */}
       <NavBody>
         {/* Logo */}
-        <a
-          href="/"
+        <Link
+          to="/"
           className="relative z-20 mr-4 flex items-center space-x-2 px-2 py-1 text-sm font-normal text-black"
         >
           <img
@@ -50,7 +64,7 @@ const Navbar = () => {
             width={100}
             height={100}
           />
-        </a>
+        </Link>
 
         {/* Nav Links */}
         <NavItems items={navItems} />
@@ -58,15 +72,36 @@ const Navbar = () => {
         {/* Buttons */}
         <div className="relative z-20 flex items-center space-x-2">
           {isAuthenticated ? (
-            <NavbarButton onClick={handleLogout} variant="primary">
-              Logout
-            </NavbarButton>
+            <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
+              <PopoverTrigger asChild>
+                <button className="cursor-pointer">
+                  <Avatar>
+                    <AvatarFallback>
+                      {currentUser?.fullName?.charAt(0).toUpperCase() || 'U'}
+                    </AvatarFallback>
+                  </Avatar>
+                </button>
+              </PopoverTrigger>
+              <PopoverContent align="end">
+                <PopoverHeader>
+                  <PopoverTitle>User Profile</PopoverTitle>
+                  <PopoverDescription>
+                    Welcome, {currentUser?.fullName || 'User'}
+                  </PopoverDescription>
+                </PopoverHeader>
+                <div className="flex flex-col gap-4 pt-4">
+                  <Button onClick={handleLogout} variant="destructive" size="sm">
+                    Logout
+                  </Button>
+                </div>
+              </PopoverContent>
+            </Popover>
           ) : (
             <>
-              <NavbarButton href="/login" variant="secondary">
+              <NavbarButton to="/login" variant="secondary">
                 Login
               </NavbarButton>
-              <NavbarButton href="/register" variant="primary">
+              <NavbarButton to="/register" variant="primary">
                 Get started
               </NavbarButton>
             </>
@@ -78,8 +113,8 @@ const Navbar = () => {
       <MobileNav>
         <MobileNavHeader>
           {/* Logo */}
-          <a
-            href="/"
+          <Link
+            to="/"
             className="relative z-20 flex items-center space-x-2 px-2 py-1 text-sm font-normal text-black"
           >
             <img
@@ -89,7 +124,7 @@ const Navbar = () => {
               height={40}
             />
             <span className="font-medium text-black dark:text-white">Clarity</span>
-          </a>
+          </Link>
 
           {/* Toggle Button */}
           <MobileNavToggle isOpen={isOpen} onClick={() => setIsOpen(!isOpen)} />
@@ -98,26 +133,48 @@ const Navbar = () => {
         {/* Mobile Menu */}
         <MobileNavMenu isOpen={isOpen} onClose={() => setIsOpen(false)}>
           {navItems.map((item, idx) => (
-            <a
+            <Link
               key={`mobile-link-${idx}`}
-              href={item.link}
+              to={item.link}
               onClick={handleNavClick}
               className="w-full text-neutral-600 dark:text-neutral-300"
             >
               {item.name}
-            </a>
+            </Link>
           ))}
           <div className="mt-4 flex w-full flex-col space-y-2">
             {isAuthenticated ? (
-              <NavbarButton onClick={handleLogout} variant="primary" className="w-full">
-                Logout
-              </NavbarButton>
+              <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
+                <PopoverTrigger asChild>
+                  <button className="flex items-center justify-center gap-2 cursor-pointer">
+                    <Avatar>
+                      <AvatarFallback>
+                        {currentUser?.name?.charAt(0).toUpperCase() || 'U'}
+                      </AvatarFallback>
+                    </Avatar>
+                    <span>Profile</span>
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent align="center">
+                  <PopoverHeader>
+                    <PopoverTitle>User Profile</PopoverTitle>
+                    <PopoverDescription>
+                      Welcome, {currentUser?.name || 'User'}
+                    </PopoverDescription>
+                  </PopoverHeader>
+                  <div className="flex flex-col gap-4 pt-4">
+                    <Button onClick={handleLogout} variant="destructive" size="sm">
+                      Logout
+                    </Button>
+                  </div>
+                </PopoverContent>
+              </Popover>
             ) : (
               <>
-                <NavbarButton href="/login" variant="secondary" className="w-full">
+                <NavbarButton to="/login" variant="secondary" className="w-full">
                   Login
                 </NavbarButton>
-                <NavbarButton href="/register" variant="primary" className="w-full">
+                <NavbarButton to="/register" variant="primary" className="w-full">
                   Get started
                 </NavbarButton>
               </>

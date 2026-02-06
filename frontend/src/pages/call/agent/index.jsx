@@ -29,8 +29,17 @@ const AgentPanel = () => {
 
             setStatusMessage('Initializing agent…');
 
-            const res = await fetch(`${API_URL}/api/v1/call/token/agent`);
+            const res = await fetch(`${API_URL}/api/v1/call/token/agent`, {
+                credentials: 'include'
+            });
             const data = await res.json();
+            
+            if (!data.success) {
+                setError(data.message || 'Failed to get token');
+                setStatus('offline');
+                return;
+            }
+            
             const { token, identity } = data;
 
             console.log('Agent identity:', identity);
@@ -47,7 +56,18 @@ const AgentPanel = () => {
                 setStatusMessage('Registering agent…');
             });
 
-            deviceRef.current.on('registered', () => {
+            deviceRef.current.on('registered', async () => {
+                // Register agent in backend
+                try {
+                    await fetch(`${API_URL}/api/v1/call/register-agent`, {
+                        method: 'POST',
+                        credentials: 'include'
+                    });
+                    console.log('Agent registered in backend');
+                } catch (error) {
+                    console.error('Failed to register agent in backend:', error);
+                }
+                
                 setStatus('online');
                 setStatusMessage('Agent ONLINE (waiting for calls)');
                 setIsOnline(true);
@@ -86,13 +106,44 @@ const AgentPanel = () => {
             await deviceRef.current.register();
         } catch (err) {
             console.error(err);
-            setError('Microphone permission denied');
+            setError(err.message || 'Microphone permission denied');
             setStatus('offline');
             setIsOnline(false);
         }
     };
 
+    // Cleanup: unregister + destroy device when component unmounts
+    // This fixes agent appearing online after navigating away
+    useEffect(() => {
+        return () => {
+            if (deviceRef.current) {
+                try {
+                    // Unregister from backend
+                    fetch(`${API_URL}/api/v1/call/unregister-agent`, {
+                        method: 'POST',
+                        credentials: 'include'
+                    }).catch(console.error);
+                    
+                    deviceRef.current.unregister();
+                    deviceRef.current.destroy();
+                } catch (e) { /* ignore */ }
+                deviceRef.current = null;
+            }
+        };
+    }, []);
+
     const stopAgent = async () => {
+        // Unregister from backend
+        try {
+            await fetch(`${API_URL}/api/v1/call/unregister-agent`, {
+                method: 'POST',
+                credentials: 'include'
+            });
+            console.log('Agent unregistered from backend');
+        } catch (error) {
+            console.error('Failed to unregister agent from backend:', error);
+        }
+        
         if (deviceRef.current) {
             deviceRef.current.unregister();
             deviceRef.current.destroy();

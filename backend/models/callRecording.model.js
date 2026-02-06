@@ -31,6 +31,11 @@ const callRecordingSchema = new mongoose.Schema({
         enum: ['completed', 'failed', 'processing'],
         default: 'completed'
     },
+    ticketStatus: {
+        type: String,
+        enum: ['Pending', 'Resolved', 'Closed'],
+        default: 'Pending'
+    },
     // Optional: Link to user if you want to track which user made the call
     userId: {
         type: mongoose.Schema.Types.ObjectId,

@@ -6,8 +6,7 @@ import {
   AnimatePresence,
   useScroll,
   useMotionValueEvent,
-} from "motion/react";
-
+} from "motion/react";import { Link } from "react-router-dom";
 import React, { useRef, useState } from "react";
 
 
@@ -91,19 +90,19 @@ export const NavItems = ({
         className
       )}>
       {items.map((item, idx) => (
-        <a
+        <Link
           onMouseEnter={() => setHovered(idx)}
           onClick={onItemClick}
           className="relative px-4 py-2 text-neutral-600 dark:text-neutral-300"
           key={`link-${idx}`}
-          href={item.link}>
+          to={item.link}>
           {hovered === idx && (
             <motion.div
               layoutId="hovered"
               className="absolute inset-0 h-full w-full rounded-full bg-gray-100 dark:bg-neutral-800" />
           )}
           <span className="relative z-20">{item.name}</span>
-        </a>
+        </Link>
       ))}
     </motion.div>
   );
@@ -206,10 +205,12 @@ export const NavbarLogo = () => {
 
 export const NavbarButton = ({
   href,
-  as: Tag = "a",
+  to,
+  as: Tag,
   children,
   className,
   variant = "primary",
+  onClick,
   ...props
 }) => {
   const baseStyles =
@@ -224,12 +225,16 @@ export const NavbarButton = ({
       "bg-gradient-to-b from-blue-500 to-blue-700 text-white shadow-[0px_2px_0px_0px_rgba(255,255,255,0.3)_inset]",
   };
 
+  const Component = Tag || (to ? Link : "button");
+  const linkProps = to ? { to } : href ? { href } : {};
+
   return (
-    <Tag
-      href={href || undefined}
+    <Component
+      {...linkProps}
+      onClick={onClick}
       className={cn(baseStyles, variantStyles[variant], className)}
       {...props}>
       {children}
-    </Tag>
+    </Component>
   );
 };

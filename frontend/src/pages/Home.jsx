@@ -1,8 +1,18 @@
-import React from 'react'
+import React, { useEffect } from 'react'
+import { useSelector } from 'react-redux'
+import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import Navbar from '@/components/shared/Navbar'
 
 const Home = () => {
+  const { isAuthenticated } = useSelector((state) => state.user)
+  const navigate = useNavigate()
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      navigate('/login')
+    }
+  }, [isAuthenticated, navigate])
   return (
     <div>
       <Navbar />
@@ -27,7 +37,7 @@ const Home = () => {
             <Button 
               size="lg" 
               className="text-lg px-8 py-6 rounded-full"
-              onClick={() => window.location.href = '/call'}
+              onClick={() => navigate('/call')}
             >
               Call an agent
             </Button>
