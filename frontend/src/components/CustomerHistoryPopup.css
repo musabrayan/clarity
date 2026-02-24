@@ -1,0 +1,275 @@
+/* Overlay */
+.history-popup-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: transparent;
+  z-index: 998;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+.history-popup-overlay.visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Popup Container - Draggable */
+.history-popup-container {
+  position: fixed;
+  bottom: 100px;
+  right: 30px;
+  width: 420px;
+  max-height: 600px;
+  z-index: 1000;
+  animation: slideInUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  user-select: none;
+}
+
+.history-popup-container.open {
+  animation: slideInUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Minimized State */
+.history-popup-container.minimized {
+  max-height: auto;
+}
+
+.history-popup-container.minimized .popup-content {
+  max-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  animation: collapseDown 0.2s ease-out forwards;
+}
+
+@keyframes collapseDown {
+  from {
+    opacity: 1;
+    max-height: 600px;
+  }
+  to {
+    opacity: 0;
+    max-height: 0;
+  }
+}
+
+.history-popup-container:not(.minimized) .popup-content {
+  animation: expandDown 0.2s ease-out forwards;
+}
+
+@keyframes expandDown {
+  from {
+    opacity: 0;
+    max-height: 0;
+  }
+  to {
+    opacity: 1;
+    max-height: 600px;
+  }
+}
+
+/* Card Styles */
+.history-popup-card {
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  border: 1px solid hsl(var(--border));
+  overflow: hidden;
+  max-height: 600px;
+  display: flex;
+  flex-direction: column;
+  user-select: text;
+}
+
+/* Header - Draggable */
+.popup-header {
+  padding: 14px 16px;
+  border-bottom: 1px solid hsl(var(--border));
+  background: hsl(var(--background));
+  transition: background 0.2s ease;
+}
+
+.popup-header:hover {
+  background: hsl(var(--muted));
+}
+
+.header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.header-actions {
+  display: flex;
+  gap: 4px;
+}
+
+/* Content */
+.popup-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px;
+  animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Scrollbar Styling */
+.popup-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.popup-content::-webkit-scrollbar-track {
+  background: hsl(var(--muted));
+}
+
+.popup-content::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted-foreground));
+  border-radius: 3px;
+}
+
+.popup-content::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--foreground));
+}
+
+/* Call Card */
+.call-card {
+  border: 1px solid hsl(var(--border));
+  border-radius: 8px;
+  padding: 12px;
+  background: hsl(var(--card));
+  transition: all 0.2s ease;
+}
+
+.call-card:hover {
+  border-color: hsl(var(--primary));
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.call-card.most-recent {
+  border: 2px solid hsl(var(--primary));
+  background: hsl(var(--primary) / 0.02);
+}
+
+/* Call Header */
+.call-header {
+  padding: 0;
+  margin: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: none;
+  display: block;
+  width: 100%;
+}
+
+.call-header:focus {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+}
+
+/* Call Details */
+.call-details {
+  animation: expandDetailsIn 0.2s ease-out;
+}
+
+@keyframes expandDetailsIn {
+  from {
+    opacity: 0;
+    max-height: 0;
+  }
+  to {
+    opacity: 1;
+    max-height: 1000px;
+  }
+}
+
+/* Text Utilities */
+.line-clamp-1 {
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.line-clamp-3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .history-popup-container {
+    position: fixed;
+    bottom: 0;
+    right: 0;
+    left: 0;
+    width: 100%;
+    max-height: 80vh;
+    border-radius: 16px 16px 0 0;
+    animation: slideInUpMobile 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  }
+
+  @keyframes slideInUpMobile {
+    from {
+      opacity: 0;
+      transform: translateY(100%);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .history-popup-card {
+    border-radius: 16px 16px 0 0;
+  }
+}
+
+@media (max-width: 480px) {
+  .history-popup-container {
+    max-height: 90vh;
+  }
+
+  .popup-header {
+    padding: 12px;
+  }
+
+  .popup-content {
+    padding: 12px;
+  }
+
+  .call-card {
+    padding: 10px;
+  }
+}
