@@ -18,6 +18,72 @@ from concurrent.futures import ThreadPoolExecutor
 
 logger = logging.getLogger(__name__)
 
+
+def _enrich_recordings_with_names(recordings):
+    """Resolve userId/agentId to customerName/agentName via batch lookup.
+    
+    For existing recordings where userId is None (due to client: prefix bug),
+    falls back to extracting the ID from the raw 'from' identity field.
+    """
+    # First pass: collect IDs, repairing missing userId from raw 'from' field
+    all_ids = set()
+    for r in recordings:
+        uid = r.get('userId')
+        aid = r.get('agentId')
+
+        # Repair: if userId is missing, try to extract from the raw 'from' field
+        if not uid:
+            raw_from = r.get('from', '')
+            extracted = extract_id_from_identity(raw_from, ['customer', 'user'])
+            if extracted:
+                try:
+                    r['userId'] = ObjectId(extracted)
+                    uid = r['userId']
+                except Exception:
+                    pass
+
+        # Same for agentId from raw 'to' field
+        if not aid:
+            raw_to = r.get('to', '')
+            extracted = extract_id_from_identity(raw_to, 'agent')
+            if extracted:
+                try:
+                    r['agentId'] = ObjectId(extracted)
+                    aid = r['agentId']
+                except Exception:
+                    pass
+
+        if uid:
+            all_ids.add(str(uid))
+        if aid:
+            all_ids.add(str(aid))
+
+    user_map = user_model.find_by_ids(list(all_ids)) if all_ids else {}
+
+    for r in recordings:
+        r['_id'] = str(r['_id'])
+
+        uid = r.get('userId')
+        if uid:
+            uid_str = str(uid)
+            user_doc = user_map.get(uid_str)
+            r['customerName'] = user_doc.get('fullName', 'Unknown') if user_doc else 'Unknown'
+            r['userId'] = uid_str
+        else:
+            r['customerName'] = 'Unknown'
+
+        aid = r.get('agentId')
+        if aid:
+            aid_str = str(aid)
+            agent_doc = user_map.get(aid_str)
+            r['agentName'] = agent_doc.get('fullName', 'Unknown') if agent_doc else 'Unknown'
+            r['agentId'] = aid_str
+        else:
+            r['agentName'] = 'Unknown'
+
+    return recordings
+
+
 # Store online agents in memory
 online_agents = set()
 
@@ -372,13 +438,7 @@ def get_all_recordings():
     """Get all recordings"""
     try:
         recordings = call_recording_model.find_all(limit=50)
-        
-        for recording in recordings:
-            recording['_id'] = str(recording['_id'])
-            if recording.get('userId'):
-                recording['userId'] = str(recording['userId'])
-            if recording.get('agentId'):
-                recording['agentId'] = str(recording['agentId'])
+        _enrich_recordings_with_names(recordings)
         
         logger.info(f"Retrieved {len(recordings)} total recordings")
         
@@ -430,13 +490,7 @@ def get_user_recordings(user_id):
     """Get recordings for a user"""
     try:
         recordings = call_recording_model.find_by_user(user_id)
-        
-        for recording in recordings:
-            recording['_id'] = str(recording['_id'])
-            if recording.get('userId'):
-                recording['userId'] = str(recording['userId'])
-            if recording.get('agentId'):
-                recording['agentId'] = str(recording['agentId'])
+        _enrich_recordings_with_names(recordings)
         
         logger.info(f"Retrieved {len(recordings)} recordings for user {user_id}")
         
@@ -458,13 +512,7 @@ def get_agent_recordings(agent_id):
     """Get recordings for an agent"""
     try:
         recordings = call_recording_model.find_by_agent(agent_id)
-        
-        for recording in recordings:
-            recording['_id'] = str(recording['_id'])
-            if recording.get('userId'):
-                recording['userId'] = str(recording['userId'])
-            if recording.get('agentId'):
-                recording['agentId'] = str(recording['agentId'])
+        _enrich_recordings_with_names(recordings)
         
         logger.info(f"Retrieved {len(recordings)} recordings for agent {agent_id}")
         

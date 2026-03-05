@@ -173,3 +173,22 @@ def logout():
             'message': 'Server error',
             'success': False
         }), 500
+
+def get_user_public_info(user_id):
+    """Get minimal public info (name) for a user by ID"""
+    try:
+        user = user_model.find_by_id(user_id)
+        if not user:
+            return jsonify({'success': False, 'message': 'User not found'}), 404
+
+        return jsonify({
+            'success': True,
+            'user': {
+                '_id': str(user['_id']),
+                'fullName': user.get('fullName', 'Unknown'),
+                'role': user.get('role'),
+            }
+        }), 200
+    except Exception as error:
+        logger.error(f"Error fetching user info: {error}", exc_info=True)
+        return jsonify({'success': False, 'message': 'Server error'}), 500

@@ -1,226 +1,106 @@
-﻿import React, { useState, useEffect, useRef } from 'react';
+﻿import React, { useState } from 'react';
+import { useGetCustomerHistoryQuery } from '@/redux/api/recordingsApi';
+import { getEmotionColor } from '@/lib/constants';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { X, ChevronDown, ChevronUp, History, Phone, ChevronRight, GripHorizontal } from 'lucide-react';
-import './CustomerHistoryPopup.css';
-import API_URL from '@/config';
+import { Separator } from '@/components/ui/separator';
+import { Skeleton } from '@/components/ui/skeleton';
+import {
+    Sheet,
+    SheetContent,
+    SheetDescription,
+    SheetHeader,
+    SheetTitle,
+} from '@/components/ui/sheet';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { ChevronDown, ChevronRight, History, Phone } from 'lucide-react';
 
 const CustomerHistoryPopup = ({ phoneNumber, isOpen, onToggle, onCallBack }) => {
-    const [callHistory, setCallHistory] = useState([]);
-    const [loading, setLoading] = useState(false);
-    const [isMinimized, setIsMinimized] = useState(false);
+    const { data: callHistory = [], isLoading: loading } = useGetCustomerHistoryQuery(phoneNumber, {
+        skip: !isOpen || !phoneNumber,
+    });
     const [expandedCall, setExpandedCall] = useState(null);
-    const [position, setPosition] = useState({ x: 0, y: 0 });
-    const [isDragging, setIsDragging] = useState(false);
-    const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
-    const popupRef = useRef(null);
-    const headerRef = useRef(null);
-
-    useEffect(() => {
-        if (isOpen && phoneNumber) {
-            fetchCustomerHistory();
-        }
-    }, [isOpen, phoneNumber]);
-
-    const fetchCustomerHistory = async () => {
-        try {
-            setLoading(true);
-            const response = await fetch(
-                `${API_URL}/api/v1/call/customer-history/${phoneNumber}`,
-                { credentials: 'include' }
-            );
-            const data = await response.json();
-
-            if (data.success) {
-                setCallHistory(data.calls);
-                if (data.calls.length > 0) {
-                    setExpandedCall(data.calls[0]._id);
-                }
-            }
-        } catch (error) {
-            console.error('Error fetching customer history:', error);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    // Handle mouse down on header
-    const handleMouseDown = (e) => {
-        if (e.target.closest('button')) return; // Don't drag if clicking a button
-
-        setIsDragging(true);
-        const rect = popupRef.current?.getBoundingClientRect();
-
-        setDragOffset({
-            x: e.clientX - (position.x || rect?.left || 0),
-            y: e.clientY - (position.y || rect?.top || 0)
-        });
-    };
-
-    // Handle mouse move
-    useEffect(() => {
-        if (!isDragging) return;
-
-        const handleMouseMove = (e) => {
-            setPosition({
-                x: e.clientX - dragOffset.x,
-                y: e.clientY - dragOffset.y
-            });
-        };
-
-        const handleMouseUp = () => {
-            setIsDragging(false);
-        };
-
-        document.addEventListener('mousemove', handleMouseMove);
-        document.addEventListener('mouseup', handleMouseUp);
-
-        return () => {
-            document.removeEventListener('mousemove', handleMouseMove);
-            document.removeEventListener('mouseup', handleMouseUp);
-        };
-    }, [isDragging, dragOffset]);
-
-    if (!isOpen) return null;
 
     const mostRecentCall = callHistory[0];
     const previousCalls = callHistory.slice(1);
 
-    const getEmotionColor = (emotion) => {
-        const colors = {
-            'Positive': 'bg-green-100 text-green-800 border-green-300',
-            'Neutral': 'bg-gray-100 text-gray-800 border-gray-300',
-            'Negative': 'bg-red-100 text-red-800 border-red-300',
-            'Frustrated': 'bg-yellow-100 text-yellow-800 border-yellow-300',
-            'Satisfied': 'bg-blue-100 text-blue-800 border-blue-300'
-        };
-        return colors[emotion] || 'bg-gray-100 text-gray-800 border-gray-300';
-    };
-
     return (
-        <>
-            {/* Overlay - Only show when popup is open */}
-            <div
-                className={`history-popup-overlay ${isOpen ? 'visible' : ''}`}
-                onClick={onToggle}
-            />
+        <Sheet open={isOpen} onOpenChange={onToggle}>
+            <SheetContent side="right" className="w-full sm:max-w-md p-0 flex flex-col">
+                <SheetHeader className="px-6 pt-6 pb-4">
+                    <div className="flex items-center gap-2">
+                        <History className="h-5 w-5 text-muted-foreground" />
+                        <SheetTitle>Customer History</SheetTitle>
+                    </div>
+                    <SheetDescription>
+                        {loading
+                            ? 'Loading call history…'
+                            : callHistory.length > 0
+                                ? `${callHistory.length} call${callHistory.length !== 1 ? 's' : ''} found`
+                                : 'No previous calls found'
+                        }
+                    </SheetDescription>
+                </SheetHeader>
 
-            {/* Popup Container */}
-            <div
-                ref={popupRef}
-                className={`history-popup-container ${isOpen ? 'open' : ''} ${isMinimized ? 'minimized' : ''}`}
-                style={{
-                    transform: `translate(${position.x}px, ${position.y}px)`,
-                    cursor: isDragging ? 'grabbing' : 'grab'
-                }}
-            >
-                <Card className="history-popup-card">
-                    {/* Header - Draggable */}
-                    <CardHeader
-                        ref={headerRef}
-                        className="popup-header cursor-grab active:cursor-grabbing"
-                        onMouseDown={handleMouseDown}
-                    >
-                        <div className="header-content">
-                            <div className="flex items-center gap-2 flex-1 min-w-0">
-                                <GripHorizontal className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
-                                <History className="h-5 w-5 flex-shrink-0" />
-                                <div className="min-w-0 flex-1">
-                                    <CardTitle className="text-lg truncate">Customer History</CardTitle>
-                                    {callHistory.length > 0 && (
-                                        <CardDescription className="text-xs">
-                                            {callHistory.length} call{callHistory.length !== 1 ? 's' : ''} found
-                                        </CardDescription>
-                                    )}
+                <Separator />
+
+                <ScrollArea className="flex-1 px-6 py-4">
+                    {loading ? (
+                        <div className="space-y-3">
+                            {[1, 2, 3].map(i => (
+                                <div key={i} className="space-y-2 rounded-md border p-3">
+                                    <Skeleton className="h-4 w-32" />
+                                    <Skeleton className="h-3 w-48" />
+                                    <Skeleton className="h-3 w-24" />
                                 </div>
-                            </div>
-                            <div className="header-actions flex-shrink-0">
-                                <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => setIsMinimized(!isMinimized)}
-                                    className="h-8 w-8 p-0"
-                                    onMouseDown={(e) => e.stopPropagation()}
-                                >
-                                    {isMinimized ? (
-                                        <ChevronUp className="h-4 w-4" />
-                                    ) : (
-                                        <ChevronDown className="h-4 w-4" />
-                                    )}
-                                </Button>
-                                <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={onToggle}
-                                    className="h-8 w-8 p-0"
-                                    onMouseDown={(e) => e.stopPropagation()}
-                                >
-                                    <X className="h-4 w-4" />
-                                </Button>
-                            </div>
+                            ))}
                         </div>
-                    </CardHeader>
+                    ) : callHistory.length === 0 ? (
+                        <p className="py-8 text-center text-sm text-muted-foreground">
+                            No previous calls found
+                        </p>
+                    ) : (
+                        <div className="space-y-3">
+                            {/* Most Recent Call */}
+                            {mostRecentCall && (
+                                <CallCard
+                                    call={mostRecentCall}
+                                    isExpanded={expandedCall === mostRecentCall._id}
+                                    onToggle={() => setExpandedCall(expandedCall === mostRecentCall._id ? null : mostRecentCall._id)}
+                                    isMostRecent={true}
+                                    getEmotionColor={getEmotionColor}
+                                    onCallBack={onCallBack}
+                                />
+                            )}
 
-                    {/* Content - Hidden when minimized */}
-                    {!isMinimized && (
-                        <CardContent className="popup-content">
-                            {loading ? (
-                                <div className="flex items-center justify-center py-8">
-                                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                                </div>
-                            ) : callHistory.length === 0 ? (
-                                <div className="text-center py-8">
-                                    <p className="text-sm text-muted-foreground">
-                                        No previous calls found
+                            {/* Divider */}
+                            {previousCalls.length > 0 && <Separator className="my-4" />}
+
+                            {/* Previous Calls */}
+                            {previousCalls.length > 0 && (
+                                <div className="space-y-2">
+                                    <p className="text-xs font-semibold text-muted-foreground px-1">
+                                        PREVIOUS CALLS ({previousCalls.length})
                                     </p>
-                                </div>
-                            ) : (
-                                <div className="space-y-3">
-                                    {/* Most Recent Call */}
-                                    {mostRecentCall && (
-                                        <CallCard
-                                            call={mostRecentCall}
-                                            isExpanded={expandedCall === mostRecentCall._id}
-                                            onToggle={() => setExpandedCall(expandedCall === mostRecentCall._id ? null : mostRecentCall._id)}
-                                            isMostRecent={true}
-                                            getEmotionColor={getEmotionColor}
-                                            onCallBack={onCallBack}
-                                        />
-                                    )}
-
-                                    {/* Divider */}
-                                    {previousCalls.length > 0 && (
-                                        <div className="my-4 border-t border-border"></div>
-                                    )}
-
-                                    {/* Previous Calls */}
-                                    {previousCalls.length > 0 && (
-                                        <div className="space-y-2">
-                                            <p className="text-xs font-semibold text-muted-foreground px-1">
-                                                PREVIOUS CALLS ({previousCalls.length})
-                                            </p>
-                                            <div className="space-y-2">
-                                                {previousCalls.map((call) => (
-                                                    <CallCard
-                                                        key={call._id}
-                                                        call={call}
-                                                        isExpanded={expandedCall === call._id}
-                                                        onToggle={() => setExpandedCall(expandedCall === call._id ? null : call._id)}
-                                                        isMostRecent={false}
-                                                        getEmotionColor={getEmotionColor}
-                                                    />
-                                                ))}
-                                            </div>
-                                        </div>
-                                    )}
+                                    <div className="space-y-2">
+                                        {previousCalls.map((call) => (
+                                            <CallCard
+                                                key={call._id}
+                                                call={call}
+                                                isExpanded={expandedCall === call._id}
+                                                onToggle={() => setExpandedCall(expandedCall === call._id ? null : call._id)}
+                                                isMostRecent={false}
+                                                getEmotionColor={getEmotionColor}
+                                            />
+                                        ))}
+                                    </div>
                                 </div>
                             )}
-                        </CardContent>
+                        </div>
                     )}
-                </Card>
-            </div>
-        </>
+                </ScrollArea>
+            </SheetContent>
+        </Sheet>
     );
 };
 
@@ -239,10 +119,12 @@ const CallCard = ({ call, isExpanded, onToggle, isMostRecent, getEmotionColor, o
     });
 
     return (
-        <div className={`call-card ${isMostRecent ? 'most-recent' : ''}`}>
+        <div className={`rounded-md border p-3 transition-colors hover:border-primary ${
+            isMostRecent ? 'border-2 border-primary bg-primary/5' : 'bg-card'
+        }`}>
             <button
                 onClick={onToggle}
-                className="w-full text-left call-header"
+                className="w-full text-left"
             >
                 <div className="flex items-center justify-between gap-3 w-full">
                     <div className="flex-1 min-w-0">
@@ -255,7 +137,7 @@ const CallCard = ({ call, isExpanded, onToggle, isMostRecent, getEmotionColor, o
                             )}
                         </div>
                         <p className="text-xs text-muted-foreground mt-1 line-clamp-1">
-                            {call.issueCategory} • {call.resolutionStatus}
+                            {call.issueCategory} &bull; {call.resolutionStatus}
                         </p>
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
@@ -272,7 +154,7 @@ const CallCard = ({ call, isExpanded, onToggle, isMostRecent, getEmotionColor, o
 
             {/* Expanded Content */}
             {isExpanded && (
-                <div className="call-details mt-3 pt-3 border-t border-border">
+                <div className="mt-3 pt-3 border-t border-border">
                     <div className="space-y-3">
                         {/* Metadata Grid */}
                         <div className="grid grid-cols-2 gap-3 text-xs">
@@ -307,7 +189,7 @@ const CallCard = ({ call, isExpanded, onToggle, isMostRecent, getEmotionColor, o
                                 <ul className="space-y-1">
                                     {call.bulletPoints.map((point, idx) => (
                                         <li key={idx} className="text-xs text-muted-foreground flex gap-2">
-                                            <span className="text-primary flex-shrink-0">•</span>
+                                            <span className="text-primary flex-shrink-0">&bull;</span>
                                             <span className="line-clamp-2">{point}</span>
                                         </li>
                                     ))}
@@ -335,7 +217,7 @@ const CallCard = ({ call, isExpanded, onToggle, isMostRecent, getEmotionColor, o
                             <Button
                                 onClick={() => onCallBack(call.phone)}
                                 size="sm"
-                                className="w-full bg-green-600 hover:bg-green-700 text-xs h-8"
+                                className="w-full text-xs h-8"
                             >
                                 <Phone className="mr-1 h-3 w-3" />
                                 Call Back Customer

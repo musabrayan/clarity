@@ -53,6 +53,26 @@ class UserModel:
             logger.error(f"Error finding user by ID: {e}", exc_info=True)
             raise
     
+    def find_by_ids(self, user_ids):
+        """Find multiple users by IDs. Returns dict mapping str(id) -> user doc."""
+        from bson.objectid import ObjectId
+        try:
+            if not user_ids:
+                return {}
+            object_ids = []
+            for uid in user_ids:
+                try:
+                    object_ids.append(ObjectId(uid))
+                except Exception:
+                    continue
+            if not object_ids:
+                return {}
+            users = self.collection.find({'_id': {'$in': object_ids}})
+            return {str(u['_id']): u for u in users}
+        except Exception as e:
+            logger.error(f"Error finding users by IDs: {e}", exc_info=True)
+            return {}
+    
     def create(self, user_data):
         """Create a new user"""
         try:

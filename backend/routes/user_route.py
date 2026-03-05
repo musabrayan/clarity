@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify, make_response
-from controllers.user_controller import register, login, logout
+from controllers.user_controller import register, login, logout, get_user_public_info
 from middleware.is_authenticated import is_authenticated
 
 user_bp = Blueprint('user', __name__)
@@ -16,3 +16,8 @@ def user_login():
 @is_authenticated
 def user_logout():
     return logout()
+
+@user_bp.route('/<user_id>/info', methods=['GET'])
+@is_authenticated
+def user_public_info(user_id):
+    return get_user_public_info(user_id)

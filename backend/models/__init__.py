@@ -1,8 +1,9 @@
 from models.user_model import user_model
 from models.call_recording_model import call_recording_model
 from models.calls_model import calls_model
+from models.issue_model import issue_model
 
-__all__ = ['user_model', 'call_recording_model', 'calls_model']
+__all__ = ['user_model', 'call_recording_model', 'calls_model', 'issue_model']
 
 import logging
 

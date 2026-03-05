@@ -1,30 +1,24 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { getWaitTime } from '@/lib/formatters';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Clock, Phone, PhoneOff, User } from 'lucide-react';
-import './CallQueue.css';
 
-const CallQueue = ({ calls, onAttendCall, onRejectCall, activeCallCount }) => {
-    const getWaitTime = (timestamp) => {
-        const now = new Date();
-        const diff = Math.floor((now - timestamp) / 1000);
-
-        if (diff < 60) {
-            return `${diff}s`;
-        } else if (diff < 3600) {
-            return `${Math.floor(diff / 60)}m`;
-        } else {
-            return `${Math.floor(diff / 3600)}h`;
-        }
-    };
+const CallQueue = ({ calls, onAttendCall, onRejectCall }) => {
+    // Force re-render every 30s so wait times stay accurate
+    const [, setTick] = useState(0);
+    useEffect(() => {
+        const interval = setInterval(() => setTick((t) => t + 1), 30_000);
+        return () => clearInterval(interval);
+    }, []);
 
     return (
-        <Card className="call-queue-card border-blue-200">
+        <Card className="animate-in slide-in-from-bottom-2 duration-300">
             <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                        <Clock className="h-5 w-5 text-blue-600" />
+                        <Clock className="h-5 w-5 text-muted-foreground" />
                         <div>
                             <CardTitle className="text-lg">
                                 Incoming Call Queue
@@ -42,16 +36,23 @@ const CallQueue = ({ calls, onAttendCall, onRejectCall, activeCallCount }) => {
 
             <CardContent className="space-y-2">
                 {calls.map((call, index) => (
-                    <div key={call.id} className="call-queue-item">
-                        <div className="call-queue-info">
-                            <div className="call-position">
-                                <span className="position-badge">{index + 1}</span>
-                            </div>
+                    <div
+                        key={call.id}
+                        className={`flex items-center justify-between gap-3 rounded-md border p-3 transition-colors hover:border-primary ${
+                            index === 0 ? 'border-2 border-destructive bg-destructive/5' : 'bg-card'
+                        } max-sm:flex-col max-sm:items-start`}
+                    >
+                        <div className="flex flex-1 items-center gap-3 min-w-0 max-sm:w-full">
+                            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-semibold text-primary-foreground">
+                                {index + 1}
+                            </span>
 
-                            <div className="call-details">
-                                <div className="flex items-center gap-2">
+                            <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-1">
                                     <User className="h-4 w-4 text-muted-foreground" />
-                                    <span className="font-semibold">{call.phone}</span>
+                                    <span className="font-semibold">
+                                        {call.callerName || 'Resolving…'}
+                                    </span>
                                     {index === 0 && (
                                         <Badge variant="destructive" className="text-xs">NEXT</Badge>
                                     )}
@@ -63,11 +64,11 @@ const CallQueue = ({ calls, onAttendCall, onRejectCall, activeCallCount }) => {
                         </div>
 
                         {index === 0 && (
-                            <div className="call-queue-actions">
+                            <div className="flex gap-2 max-sm:w-full">
                                 <Button
                                     size="sm"
                                     onClick={onAttendCall}
-                                    className="bg-green-600 hover:bg-green-700"
+                                    className="max-sm:flex-1"
                                 >
                                     <Phone className="mr-1 h-4 w-4" />
                                     Accept
@@ -76,6 +77,7 @@ const CallQueue = ({ calls, onAttendCall, onRejectCall, activeCallCount }) => {
                                     size="sm"
                                     variant="destructive"
                                     onClick={() => onRejectCall(call.id)}
+                                    className="max-sm:flex-1"
                                 >
                                     <PhoneOff className="mr-1 h-4 w-4" />
                                     Reject

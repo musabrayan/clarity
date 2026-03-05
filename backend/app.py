@@ -51,9 +51,11 @@ logger.info(f"Starting Clarity Backend - Environment: {os.getenv('FLASK_ENV', 'd
 # CORS CONFIGURATION
 # ============================================================================
 FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:5173')
+# Support comma-separated origins for multi-environment CORS
+allowed_origins = [url.strip() for url in FRONTEND_URL.split(',')]
 CORS(app, 
      resources={r"/api/*": {
-         "origins": [FRONTEND_URL],
+         "origins": allowed_origins,
          "methods": ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
          "allow_headers": ["Content-Type", "Authorization"],
          "supports_credentials": True,
@@ -61,7 +63,7 @@ CORS(app,
          "expose_headers": ["Content-Type", "Authorization"]
      }})
 
-logger.info(f"CORS configured for origin: {FRONTEND_URL}")
+logger.info(f"CORS configured for origins: {allowed_origins}")
 
 # ============================================================================
 # HEALTH CHECK ENDPOINT
@@ -90,9 +92,11 @@ def health_check():
 try:
     from routes.user_route import user_bp
     from routes.call_route import call_bp
+    from routes.issue_route import issue_bp
     
     app.register_blueprint(user_bp, url_prefix='/api/v1/user')
     app.register_blueprint(call_bp, url_prefix='/api/v1/call')
+    app.register_blueprint(issue_bp, url_prefix='/api/v1/issues')
     
     logger.info("Routes registered successfully")
 except Exception as e:

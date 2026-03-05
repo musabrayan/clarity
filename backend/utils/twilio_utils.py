@@ -37,7 +37,7 @@ def create_voice_response(say_text=None, options=None):
     
     if options:
         # Get base URL for callbacks
-        base_url = options.get('base_url', os.getenv('BASE_URL', 'https://79a3-2409-408d-307-561d-6d50-b556-9881-65a1.ngrok-free.app'))
+        base_url = options.get('base_url', os.getenv('BASE_URL', 'http://localhost:5000'))
         
         # Build dial with recording and callbacks
         dial_kwargs = {
@@ -63,13 +63,20 @@ def create_voice_response(say_text=None, options=None):
     return twiml_str
 
 def extract_id_from_identity(identity, role_filter):
-    """Extract user ID from identity string"""
+    """Extract user ID from identity string.
+    
+    Handles Twilio 'client:' prefix, e.g. 'client:customer_64abc...' -> '64abc...'
+    """
+    if not identity:
+        return None
+    # Strip Twilio 'client:' prefix if present
+    cleaned = identity.split(':', 1)[-1] if ':' in identity else identity
     if isinstance(role_filter, list):
         for role in role_filter:
-            if identity.startswith(role):
-                return identity.split('_')[-1]
+            if cleaned.startswith(role):
+                return cleaned.split('_', 1)[-1]
         return None
     else:
-        if identity.startswith(role_filter):
-            return identity.split('_')[-1]
+        if cleaned.startswith(role_filter):
+            return cleaned.split('_', 1)[-1]
         return None
