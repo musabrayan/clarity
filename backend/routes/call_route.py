@@ -18,7 +18,9 @@ from controllers.call_controller import (
     get_customer_calls,
     get_calls_by_emotion,
     get_calls_by_category,
-    get_customer_history_by_phone
+    get_customer_history_by_phone,
+    train_drl_model,
+    get_routing_stats
 )
 from middleware.is_authenticated import is_authenticated
 
@@ -117,3 +119,17 @@ def calls_by_category(category):
 @call_bp.route('/customer-history/<phone_number>', methods=['GET'])
 def customer_history(phone_number):
     return get_customer_history_by_phone(phone_number)
+
+# ═══════════════════════════════════════════════════════════════════════════
+# DRL ROUTING MANAGEMENT
+# ═══════════════════════════════════════════════════════════════════════════
+
+@call_bp.route('/routing/train', methods=['POST'])
+@is_authenticated
+def routing_train():
+    return train_drl_model()
+
+@call_bp.route('/routing/stats', methods=['GET'])
+@is_authenticated
+def routing_stats():
+    return get_routing_stats()
