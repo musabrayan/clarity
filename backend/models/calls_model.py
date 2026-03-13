@@ -119,6 +119,59 @@ class CallsModel:
             logger.error(f"Error finding calls by category: {e}", exc_info=True)
             raise
 
+    # ------------------------------------------------------------------
+    # DRL routing support
+    # ------------------------------------------------------------------
+
+    def update_routing_reward(self, call_id, reward, routed_by='drl', routing_state=None):
+        """Store the routing reward for a completed call."""
+        try:
+            update = {
+                'routingReward': reward,
+                'routedBy': routed_by,
+                'updatedAt': datetime.utcnow(),
+            }
+            if routing_state is not None:
+                update['routingState'] = routing_state
+            self.collection.update_one(
+                {'_id': ObjectId(call_id)},
+                {'$set': update}
+            )
+        except Exception as e:
+            logger.error(f"Error updating routing reward: {e}", exc_info=True)
+
+    def find_recent_by_customer_and_category(self, customer_id, category, days=7, limit=5):
+        """Find recent calls for same customer + category (for repeat-call detection)."""
+        try:
+            from datetime import timedelta
+            cutoff = datetime.utcnow() - timedelta(days=days)
+            return list(self.collection.find({
+                'customerId': ObjectId(customer_id),
+                'issueCategory': category,
+                'createdAt': {'$gte': cutoff},
+            }).sort('createdAt', -1).limit(limit))
+        except Exception as e:
+            logger.error(f"Error finding recent calls by category: {e}", exc_info=True)
+            return []
+
+    def get_routing_stats(self, limit=500):
+        """Aggregate routing decision statistics."""
+        try:
+            pipeline = [
+                {'$match': {'routedBy': {'$exists': True}}},
+                {'$sort': {'createdAt': -1}},
+                {'$limit': limit},
+                {'$group': {
+                    '_id': '$routedBy',
+                    'count': {'$sum': 1},
+                    'avgReward': {'$avg': '$routingReward'},
+                }},
+            ]
+            return list(self.collection.aggregate(pipeline))
+        except Exception as e:
+            logger.error(f"Error getting routing stats: {e}", exc_info=True)
+            return []
+
 
 # Initialize model
 try:

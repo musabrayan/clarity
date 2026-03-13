@@ -9,6 +9,7 @@ from utils.twilio_utils import (
     extract_id_from_identity
 )
 from utils.ai_processor import ai_processor
+from utils.reward import compute_reward
 from bson.objectid import ObjectId
 import os
 import logging
@@ -183,22 +184,74 @@ def unregister_agent():
         }), 500
 
 def get_available_agent():
-    """Get an available agent"""
+    """Get the best available agent using DRL routing.
+
+    Fallback chain:
+        1. DRL model (if checkpoint loaded)
+        2. Skill-match heuristic
+        3. First available agent
+    """
     try:
-        agent_id = next(iter(online_agents)) if online_agents else None
-        
-        if not agent_id:
+        if not online_agents:
             return jsonify({
                 'success': False,
                 'message': 'No agents are currently online'
             }), 404
-        
+
+        agent_ids = list(online_agents)
+
+        # Fast path: single agent
+        if len(agent_ids) == 1:
+            return jsonify({
+                'success': True,
+                'agentId': agent_ids[0],
+                'identity': f'agent_{agent_ids[0]}',
+                'routedBy': 'fallback',
+            }), 200
+
+        # --- Build routing context from caller's previous calls ---
+        customer_id = request.args.get('customerId') or request.args.get('customer_id')
+        emotion_score = 0.5
+        issue_category = 'General'
+        expertise_level = 'Beginner'
+
+        if customer_id:
+            try:
+                prev_calls = calls_model.find_by_customer(customer_id, limit=1)
+                if prev_calls:
+                    last = prev_calls[0]
+                    emotion_score = last.get('emotionScore', 0.5) or 0.5
+                    issue_category = last.get('issueCategory', 'General') or 'General'
+                    expertise_level = last.get('expertiseLevel', 'Beginner') or 'Beginner'
+            except Exception as e:
+                logger.warning(f"Could not fetch caller context: {e}")
+
+        # --- Fetch agent profiles ---
+        profiles = user_model.get_agent_profiles(agent_ids)
+
+        # --- DRL routing ---
+        try:
+            from drl.agent_router import drl_router
+            selected_id, method = drl_router.select_agent(
+                emotion_score, issue_category, expertise_level, profiles
+            )
+        except Exception as e:
+            logger.warning(f"DRL router unavailable ({e}), using first-available")
+            selected_id, method = agent_ids[0], 'fallback'
+
+        if selected_id is None:
+            selected_id, method = agent_ids[0], 'fallback'
+
+        logger.info(f"Routing decision: agent={selected_id}, method={method}, "
+                    f"category={issue_category}, emotion={emotion_score}")
+
         return jsonify({
             'success': True,
-            'agentId': agent_id,
-            'identity': f'agent_{agent_id}'
+            'agentId': selected_id,
+            'identity': f'agent_{selected_id}',
+            'routedBy': method,
         }), 200
-    
+
     except Exception as error:
         logger.error(f"Error fetching available agent: {error}")
         return jsonify({
@@ -236,6 +289,15 @@ def handle_voice_webhook():
         })
         
         logger.info(f"Voice webhook: routing to {to}")
+
+        # Increment agent workload on call connect
+        agent_id = extract_id_from_identity(to, 'agent')
+        if agent_id:
+            try:
+                user_model.increment_workload(agent_id)
+            except Exception as wl_err:
+                logger.warning(f"Failed to increment workload: {wl_err}")
+
         return response_xml, 200, {'Content-Type': 'application/xml'}
     
     except Exception as error:
@@ -295,12 +357,55 @@ def process_recording_background(recording_sid, recording_url, user_id, agent_id
                 'callSid': recording.get('callSid')
             }
             
-            calls_model.create(call_data)
+            call_id = calls_model.create(call_data)
             logger.info(f"Created call record in calls table")
             logger.info(f"Emotion: {result.get('emotion_label')}, Category: {result.get('issue_category')}")
+
+            # 3. Compute and store routing reward + update agent performance
+            try:
+                duration_sec = recording.get('duration', 0) or 0
+                resolution = result.get('resolution_status', 'Pending')
+                emo_score = result.get('emotion_score', 0.5) or 0.5
+                cat = result.get('issue_category', 'General') or 'General'
+
+                is_repeat = False
+                if user_id:
+                    repeats = calls_model.find_recent_by_customer_and_category(
+                        user_id, cat, days=7, limit=2
+                    )
+                    # More than 1 means current + at least one previous
+                    is_repeat = len(repeats) > 1
+
+                reward = compute_reward(
+                    resolution_status=resolution,
+                    emotion_score=emo_score,
+                    issue_category=cat,
+                    duration_sec=duration_sec,
+                    is_repeat_call=is_repeat,
+                )
+                calls_model.update_routing_reward(call_id, reward)
+                logger.info(f"Routing reward: {reward} (resolved={resolution}, repeat={is_repeat})")
+
+                # Update agent performance metrics
+                if agent_id:
+                    user_model.decrement_workload(agent_id)
+                    user_model.update_performance(
+                        agent_id,
+                        resolved=(resolution == 'Resolved'),
+                        escalated=(resolution == 'Escalated'),
+                        handle_time_sec=duration_sec,
+                    )
+            except Exception as perf_err:
+                logger.warning(f"Failed to update routing reward / agent perf: {perf_err}")
             
         else:
             logger.error(f"AI processing failed: {result.get('error')}")
+            # Still decrement workload on failure
+            if agent_id:
+                try:
+                    user_model.decrement_workload(agent_id)
+                except Exception:
+                    pass
     
     except Exception as e:
         logger.error(f"Error in background processing: {str(e)}", exc_info=True)
@@ -827,3 +932,65 @@ def get_customer_history_by_phone(phone_number):
             'message': 'Failed to fetch customer history',
             'error': str(error)
         }), 500
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# DRL Routing — admin / stats endpoints
+# ══════════════════════════════════════════════════════════════════════════
+
+def update_agent_skills(agent_id):
+    """PATCH — update an agent's skill_vector.
+    Body: { "skill_vector": {"Sales": 0.9, "Technical": 0.3, ...} }
+    """
+    try:
+        data = request.get_json()
+        skill_vector = data.get('skill_vector')
+        if not skill_vector or not isinstance(skill_vector, dict):
+            return jsonify({
+                'success': False,
+                'message': 'skill_vector dict is required'
+            }), 400
+
+        valid_keys = {'Sales', 'Technical', 'Billing', 'General', 'Other'}
+        for k, v in skill_vector.items():
+            if k not in valid_keys:
+                return jsonify({'success': False, 'message': f'Invalid category: {k}'}), 400
+            if not isinstance(v, (int, float)) or not (0 <= v <= 1):
+                return jsonify({'success': False, 'message': f'Value for {k} must be 0-1'}), 400
+
+        success = user_model.update_agent_skills(agent_id, skill_vector)
+        if not success:
+            return jsonify({'success': False, 'message': 'Agent not found'}), 404
+
+        return jsonify({'success': True, 'message': 'Skills updated'}), 200
+
+    except Exception as error:
+        logger.error(f"Error updating agent skills: {error}")
+        return jsonify({'success': False, 'error': str(error)}), 500
+
+
+def get_routing_stats():
+    """GET — return DRL routing decision statistics."""
+    try:
+        stats = calls_model.get_routing_stats(limit=500)
+        formatted = []
+        for s in stats:
+            formatted.append({
+                'method': s['_id'],
+                'count': s['count'],
+                'avgReward': round(s['avgReward'], 2) if s['avgReward'] else 0,
+            })
+        return jsonify({'success': True, 'stats': formatted}), 200
+    except Exception as error:
+        logger.error(f"Error fetching routing stats: {error}")
+        return jsonify({'success': False, 'error': str(error)}), 500
+
+
+def migrate_agents():
+    """POST — one-time migration to add default DRL fields to existing agents."""
+    try:
+        count = user_model.migrate_agents_defaults()
+        return jsonify({'success': True, 'migrated': count}), 200
+    except Exception as error:
+        logger.error(f"Error migrating agents: {error}")
+        return jsonify({'success': False, 'error': str(error)}), 500

@@ -18,7 +18,10 @@ from controllers.call_controller import (
     get_customer_calls,
     get_calls_by_emotion,
     get_calls_by_category,
-    get_customer_history_by_phone
+    get_customer_history_by_phone,
+    update_agent_skills,
+    get_routing_stats,
+    migrate_agents,
 )
 from middleware.is_authenticated import is_authenticated
 
@@ -117,3 +120,19 @@ def calls_by_category(category):
 @call_bp.route('/customer-history/<phone_number>', methods=['GET'])
 def customer_history(phone_number):
     return get_customer_history_by_phone(phone_number)
+
+# DRL routing — admin endpoints
+@call_bp.route('/agent/<agent_id>/skills', methods=['PATCH'])
+@is_authenticated
+def agent_skills(agent_id):
+    return update_agent_skills(agent_id)
+
+@call_bp.route('/routing-stats', methods=['GET'])
+@is_authenticated
+def routing_stats():
+    return get_routing_stats()
+
+@call_bp.route('/migrate-agents', methods=['POST'])
+@is_authenticated
+def migrate():
+    return migrate_agents()
