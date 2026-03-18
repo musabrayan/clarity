@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useState, useRef, useEffect, useMemo } from 'react';
+import { useSelector } from 'react-redux';
 import { Device } from '@twilio/voice-sdk';
+import { selectUserId } from '@/redux/slice/user.slice';
 import api from '@/services/api';
 
 const CustomerCallContext = createContext(null);
@@ -18,6 +20,9 @@ export function CustomerCallProvider({ children }) {
     const [isFindingAgent, setIsFindingAgent] = useState(false);
     const deviceRef = useRef(null);
     const callRef = useRef(null);
+
+    // Get current user ID for DRL routing
+    const userId = useSelector(selectUserId);
 
     // Cleanup only when the provider unmounts (i.e. logout / leave authenticated layout)
     useEffect(() => {
@@ -85,9 +90,11 @@ export function CustomerCallProvider({ children }) {
 
         try {
             setIsFindingAgent(true);
-            setStatus('Finding available agent...');
+            setStatus('Finding best available agent...');
 
-            const { data: agentData } = await api.get('/api/v1/call/available-agent');
+            // Pass customer_id for DRL-based intelligent routing
+            const params = userId ? `?customer_id=${userId}` : '';
+            const { data: agentData } = await api.get(`/api/v1/call/available-agent${params}`);
 
             if (!agentData.success) {
                 setStatus(agentData.message || 'No agent available');
@@ -152,3 +159,4 @@ export function CustomerCallProvider({ children }) {
         </CustomerCallContext.Provider>
     );
 }
+

@@ -60,7 +60,7 @@ Python Flask
 
 Twilio Webhooks
 
-Mongodb
+Mongodb (database)
 
 OpenAI API (cloud AI)
 
