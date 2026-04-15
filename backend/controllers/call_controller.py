@@ -935,10 +935,28 @@ def train_drl_model():
         batch_size = data.get('batch_size', 32)
         n_batches = data.get('n_batches', 10)
 
+        replay_count_before = routing_experience_model.count()
+        logger.info(
+            "DRL training requested: batch_size=%s n_batches=%s replay_count_before=%s",
+            batch_size,
+            n_batches,
+            replay_count_before,
+        )
+
         result = drl_router.train(
             routing_experience_model,
             batch_size=batch_size,
             n_batches=n_batches,
+        )
+
+        replay_count_after = routing_experience_model.count()
+        logger.info(
+            "DRL training completed: success=%s batches=%s avg_loss=%s model_steps=%s replay_count_after=%s",
+            result.get('success'),
+            result.get('batches'),
+            result.get('avg_loss'),
+            result.get('model_steps'),
+            replay_count_after,
         )
 
         logger.info(f"DRL training result: {result}")
