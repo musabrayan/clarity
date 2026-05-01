@@ -96,7 +96,7 @@ export function CustomerCallProvider({ children }) {
             const params = userId ? `?customer_id=${userId}` : '';
             const { data: agentData } = await api.get(`/api/v1/call/available-agent${params}`);
 
-            if (!agentData.success) {
+            if (!agentData.success || !agentData.identity) {
                 setStatus(agentData.message || 'No agent available');
                 return;
             }
@@ -128,7 +128,8 @@ export function CustomerCallProvider({ children }) {
             });
 
         } catch (err) {
-            setStatus('Failed to connect: ' + err.message);
+            const apiMessage = err?.response?.data?.message;
+            setStatus(apiMessage || `Failed to connect: ${err.message}`);
             setIsCallActive(false);
         } finally {
             setIsFindingAgent(false);
