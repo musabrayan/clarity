@@ -198,8 +198,11 @@ def get_available_agent():
         if not online_agents:
             return jsonify({
                 'success': False,
-                'message': 'No agents are currently online'
-            }), 404
+                'message': 'No agents are currently online',
+                'agentId': None,
+                'identity': None,
+                'routing_method': 'no_agents_available'
+            }), 200
 
         customer_id = request.args.get('customer_id')
 
